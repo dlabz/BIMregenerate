@@ -1,0 +1,106 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+		<title>BIMServer regenerate models</title>
+	</head>
+	<body>
+		<div class="indexStatus statusWrapper">
+			<div class="alert status">
+				<div class="message"></div>
+			</div>
+		</div>
+
+		<div class="projectsList">
+			
+		</div>
+		
+		<script src='js/jquery/jquery-1.8.2.min.js'></script>
+		<script src='js/jquery/jquery.cookie.js'></script>
+		<script src='js/jquery/sha256.js'></script>
+		<script src='js/String.js'></script>
+		<script src='js/bimserverapibootstrap.js'></script>
+		<script src='js/Notifier.js'></script>
+		<script type="application/javascript">
+			var Global = {};
+			var notifier = new Notifier();
+			
+			function onError(error){
+				console.log("Error:", error);
+			};
+			
+			function onRegenerated(data){
+				console.log("onRegenerated",data);
+				$(".projectsList").append("done");
+				i++;
+				nextProject();
+			};
+			
+			function regenerate(project){
+				$(".projectsList").append("<p id='"+project.oid+"'><strong>"+project.name+"</strong> : "+project.lastConcreteRevisionId+"</p>");
+				if (project.lastConcreteRevisionId > 0){
+					Global.bimServerApi.call(
+							"AdminInterface", 
+							"regenerateGeometry", 
+							{
+								"croid" : project.lastConcreteRevisionId
+							},
+							onRegenerated,
+							onError,
+							true,
+							true,
+							true
+					);
+				}else{
+					$(".projectsList").append("no concrete revision");
+					i++;
+					nextProject();
+				};
+			};
+			
+			var i = 0;
+			function nextProject(){
+				var project = Global.projects[i];	
+				regenerate(Global.projects[i]);
+				
+			};
+			
+			function onProjects(projects){
+				console.log("onProjects", projects);
+				
+				Global.projects = projects;	
+				nextProject();
+			};
+			
+			function onLogin() {
+				console.log("onLogin");
+				
+				Global.bimServerApi.call(
+					"Bimsie1ServiceInterface", 
+					"getAllProjects", 
+					{
+						"onlyTopLevel" : "false",
+						"onlyActive" : "false"
+					},
+					onProjects,
+					onError,
+					true,
+					true,
+					true
+				);
+
+			};
+
+			function onLoad() {
+				console.log("onLoad");
+				Global.bimServerApi.login("admin@bimserver.org", "admin", true, onLogin);
+			};
+
+			function onError() {
+				console.log("onError");
+			};
+			loadBimServerApi("http://localhost:8080/", notifier, onLoad, onError);
+		</script>
+
+	</body>
+</html>
